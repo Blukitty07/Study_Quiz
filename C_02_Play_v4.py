@@ -263,6 +263,7 @@ class Play:
         self.play_box.destroy()
 
 
+# main routine
 if __name__ == "__main__":
     root = Tk()
     root.title("Studies Quiz")

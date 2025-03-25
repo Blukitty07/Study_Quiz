@@ -1,4 +1,5 @@
 from tkinter import *
+from PIL import Image, ImageTk
 from functools import partial  # To prevent unwanted windows
 import csv
 import random
@@ -50,42 +51,117 @@ def get_study_names():
 
 class StartGame:
     """
-    Initial Game Interface (asks users how many
-    rounds they would like to play)
+    Initial starting screen
     """
 
     def __init__(self):
         """
-        Gets number of rounds from user
+        gets no. rounds from users input
         """
 
+        # set up the start frame
         self.start_frame = Frame(pady=10, padx=10)
         self.start_frame.grid()
 
-        # create play button
+        # Load the image
+        image = Image.open('study.jpg')
+
+        # Resize the image in the given (width, height)
+        img = image.resize((320, 223))
+
+        # Converse the image in TkImage
+        my_img = ImageTk.PhotoImage(img)
+
+        # Display the image with label
+        display_image = Label(self.start_frame, image=my_img, background="#000000")
+        display_image.image = my_img  # anchoring the image to prevent garbage collection
+        display_image.grid(row=0)
+
+        # Set up strings
+        mode_string = ("Choose what mode you'd like to play: \n"
+                       "Mode 1 - Study of = This word \n"
+                       "Mode 2 - This word = Study of")
+
+        # list of labels to be made(text | font | font colour)
+        # currently only one text, but prepared for potential future
+        start_game_labels_list = [
+            [mode_string, ("Arial", "14"), None]
+        ]
+
+        # create the labels and add them to a reference list
+        start_game_labels_ref = []
+
+        for count, item in enumerate(start_game_labels_list):
+            make_the_label = Label(self.start_frame, text=item[0],
+                                   font=item[1], fg=item[2], padx=10, pady=5)
+            make_the_label.grid(row=1)
+
+            start_game_labels_ref.append(make_the_label)
+
+        self.mode_label = start_game_labels_ref[0]
+
+        # make entry box for amount of rounds
+        self.amount_of_rounds = Entry(self.start_frame, font=("Arial", "14", "bold"), width=30)
+        self.amount_of_rounds.grid(row=2, padx=10, pady=10)
+
+        # made the frame for the buttons
+        self.mode_button_frame = Frame(pady=25, padx=10)
+        self.mode_button_frame.grid(row=3)
+
         # prepare to see which button is clicked
         first_mode_click = "first"
         second_mode_click = "second"
         # make the buttons
-        self.first_mode_button = Button(self.start_frame, font=("Arial", "16", "bold"),
+        self.first_mode_button = Button(self.mode_button_frame, font=("Arial", "16", "bold"),
                                         bg="#73fffd", text="Mode 1", width=10, height=2,
                                         command=lambda: [self.check_rounds(first_mode_click)])
         self.first_mode_button.grid(row=0, column=0, padx=5, pady=5)
 
-        self.second_mode_button = Button(self.start_frame, font=("Arial", "16", "bold"), fg="#FFFFFF",
+        self.second_mode_button = Button(self.mode_button_frame, font=("Arial", "16", "bold"), fg="#FFFFFF",
                                          bg="#1d0eab", text="Mode 2", width=10, height=2,
                                          command=lambda: [self.check_rounds(second_mode_click)])
         self.second_mode_button.grid(row=0, column=1, pady=5, padx=5)
 
     def check_rounds(self, mode):
         """
-        Checks users have entered 1 or more rounds
+        checks that 1 or more rounds have been entered
         """
 
-        Play(5, mode)
+        # get the amount of rounds
+        rounds_wanted = self.amount_of_rounds.get()
 
-        # Hide root window
-        root.withdraw()
+        # Reset label and entry box (for when users come back to home screen)
+        self.mode_label.config(text=("Choose what mode you'd like to play: \n"
+                                     "Mode 1 - Study of = This word \n"
+                                     "Mode 2 - This word = Study of"),
+                               fg="#000000", font=("Arial", "12", "bold"))
+        self.amount_of_rounds.config(bg="#FFFFFF")
+
+        # set up strings
+        error = "Please enter a whole number more than 0"
+        error_check = "Nope"
+
+        # appropriate amount of rounds checker
+        try:
+            rounds_wanted = int(rounds_wanted)
+            # correct amount of rounds
+            if rounds_wanted >= 1:
+                Play(rounds_wanted, mode)
+                # Hide root window (ie: hide round choice window)
+                root.withdraw()
+
+            # incorrect amount of rounds
+            else:
+                error_check = "yes"
+        # wrong values
+        except ValueError:
+            error_check = "yes"
+
+        # display the error if necessary
+        if error_check == "yes":
+            self.mode_label.config(text=error, fg="#c20000", font=("Arial", "10", "bold"))
+            self.amount_of_rounds.config(bg="#F4CCCC")
+            self.amount_of_rounds.delete(0, END)
 
 
 class Play:
@@ -147,7 +223,7 @@ class Play:
         # create the four answer buttons in a 2x2 grid
         for item in range(0, 4):
             self.answer_button = Button(self.answer_frame, font=("Arial", "12"),
-                                        text="answer option", width=15,
+                                        text="answer option", width=16,
                                         bg=background_ref_list[item], command=partial(self.get_score, item))
             self.answer_button.grid(row=item // 2, column=item % 2, padx=5, pady=5)
 
@@ -163,7 +239,7 @@ class Play:
         # list for buttons (frame | text | bg | command | width | row | column )
         control_button_list = [
             [self.game_frame, "Next Round", "#86a5c4", lambda: [self.new_round(mode)], 21, 5, None],
-            [self.hints_stats_frame, "Hints", "#c0bdff", "", 10, 0, 0],
+            [self.hints_stats_frame, "Hints", "#c0bdff", self.to_hints, 10, 0, 0],
             [self.hints_stats_frame, "Stats", "#bdeaff", "", 10, 0, 1],
             [self.game_frame, "Game Over", "#cc81a5", self.close_play, 21, 7, None]
         ]
@@ -180,6 +256,7 @@ class Play:
 
         # retrieve next, stats and end button so that they can be configured
         self.next_button = controls_ref_list[0]
+        self.hints_button = controls_ref_list[1]
         self.stats_button = controls_ref_list[2]
         self.end_game_button = controls_ref_list[3]
 
@@ -206,31 +283,26 @@ class Play:
         # Update heading, and score to beat labels. "Hide" results label
         self.round_label.config(text=f"Round {rounds_played} of {rounds_wanted}")
 
-        # could convert this entire bit into a function
-        # enable answer buttons (disabled at the end of the last round)
-        if mode == "first":
-            for count, item in enumerate(self.answer_button_ref):
-                item.config(text=study_names[count], wraplength=125, state=NORMAL)
-                self.next_button.config(state=DISABLED)
-        else:  # could try to find a better way to wrap text but currently this works well enough
-            for count, item in enumerate(self.answer_button_ref):
-                item.config(text=study_types[count], wraplength=125, state=NORMAL)
-
-            self.next_button.config(state=DISABLED)
-
-        # make the question and display it
         # also get the same name attached to the study and make it the correct answer [half of this in get_score]
+        # set up number list to select a single option from the options for this round
         number_list = [0, 1, 2, 3]
         self.round_number_ref = random.choice(number_list)
         study_type = study_types[self.round_number_ref]
         study_name = study_names[self.round_number_ref]
 
+        # enable answer buttons and make questions / answers for this round
         if mode == "first":
+            questions = study_names
             self.question_label.config(text=f"What is the Study of {study_type}?")
         else:
+            questions = study_types
             self.question_label.config(text=f"{study_name} is the Study of what?")
 
+        for count, item in enumerate(self.answer_button_ref):
+            item.config(text=questions[count], wraplength=140, state=NORMAL)
 
+        # disabled until answer is chosen
+        self.next_button.config(state=DISABLED)
 
     def get_score(self, user_choice):
         """
@@ -239,13 +311,8 @@ class Play:
         results to stats list
         """
 
-        # was it correct???? finding out what button was pushed and if it was correct
-        print(user_choice)  # what button was clicked
-        print(self.round_number_ref)
-
         if user_choice == self.round_number_ref:
-            self.score += 1
-            print(self.score)
+            self.score += 1  # add 1 to score
             self.score_label.config(text=f"Current Score: {self.score}")
         else:
             pass
@@ -261,7 +328,7 @@ class Play:
         # if no more rounds reconfigure buttons [set up to proceed to end game GUI]
         if rounds_played == rounds_wanted:
             self.next_button.config(state=DISABLED, text="No more Rounds")
-            self.end_game_button.config(text="End Screen", bg="#006600", command=self.close_play)
+            self.end_game_button.config(text="End Screen", bg="#de8e99", command=self.close_play)
 
         for item in self.answer_button_ref:
             item.config(state=DISABLED)
@@ -272,7 +339,69 @@ class Play:
         root.deiconify()
         self.play_box.destroy()
 
+    def to_hints(self):
+        """
+        Displays hints for playing game
+        """
+        DisplayHints(self)
 
+
+class DisplayHints:
+
+    def __init__(self, partner):
+        # setup dialog box and background colour
+        background = "#c0bdff"
+        self.hint_box = Toplevel()
+
+        # disable hint button
+        partner.hints_button.config(state=DISABLED)
+
+        # If users press cross at top, closes hint and releases hint button
+        self.hint_box.protocol('WM_DELETE_WINDOW',
+                               partial(self.close_hints, partner))
+
+        self.hint_frame = Frame(self.hint_box, width=300,
+                                height=200)
+        self.hint_frame.grid()
+
+        self.hint_heading_label = Label(self.hint_frame,
+                                        text="Hints",
+                                        font=("Arial", "14", "bold"))
+        self.hint_heading_label.grid(row=0)
+
+        hint_text = "This is a quiz about the various types of studies. \n" \
+                    "Depending on the Mode that you picked the questions will either ask:\n" \
+                    "What is the Study of ___ or ___ is the study of what? \n" \
+                    "In either case you need to select the correct answer out of 4 possible choices. \n" \
+                    "If you select the correct one then 1 point will be added to your score!"
+
+        self.hint_text_label = Label(self.hint_frame,
+                                     text=hint_text, wraplength=350,
+                                     justify="left")
+        self.hint_text_label.grid(row=1, padx=10)
+
+        self.dismiss_button = Button(self.hint_frame,
+                                     font=("Arial", "12", "bold"),
+                                     text="Dismiss", bg="#7571d9",
+                                     fg="#FFFFFF",
+                                     command=partial(self.close_hints, partner))
+        self.dismiss_button.grid(row=2, padx=10, pady=10)
+
+        recolour_list = [self.hint_frame, self.hint_heading_label, self.hint_text_label]
+
+        for item in recolour_list:
+            item.config(bg=background)
+
+    def close_hints(self, partner):
+        """
+        Closes hint dialogue box (and enables hint button)
+        """
+        # Put hint button back to normal
+        partner.hints_button.config(state=NORMAL)
+        self.hint_box.destroy()
+
+
+# main routine
 if __name__ == "__main__":
     root = Tk()
     root.title("Studies Quiz")

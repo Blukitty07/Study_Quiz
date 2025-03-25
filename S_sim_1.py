@@ -5,21 +5,6 @@ import random
 
 
 # functions for classes and helping go here
-def get_studies():
-    """
-    Retrieves studies from csv file
-    :return: list of studies which where each list item has the
-     study name, and what the study is about
-    """
-    # Retrieve studies for csv file and put them in a list
-    file = open("study_of.csv", "r")
-    all_studies = list(csv.reader(file, delimiter=","))
-    file.close()
-
-    # remove first row
-    all_studies.pop(0)
-
-    return all_studies
 
 
 def get_study_names():
@@ -28,22 +13,10 @@ def get_study_names():
     :return: list of studies
     """
 
-    all_study_list = get_studies()
+    all_study_list = []
 
-    study_names = []
-    study_types = []
-
-    # loop until we have four studies that are all different fields of study
-    while len(study_names) < 4:
-        potential_study = random.choice(all_study_list)
-
-        # get the study type and check it's not a duplicate
-        if potential_study[1] not in study_types:
-            actual_rad_study = potential_study[1].replace("Study of ", "")
-            study_types.append(actual_rad_study)
-
-            # append the study name to the list for the round
-            study_names.append(potential_study[0])
+    study_names = ["Forensic Anthropology", "Electrocardiography", "Oology", "Virology"]
+    study_types = ["human remains for legal purposes", "the electrical activity of the heart", "eggs", "viruses"]
 
     return study_names, study_types
 
@@ -206,31 +179,26 @@ class Play:
         # Update heading, and score to beat labels. "Hide" results label
         self.round_label.config(text=f"Round {rounds_played} of {rounds_wanted}")
 
-        # could convert this entire bit into a function
-        # enable answer buttons (disabled at the end of the last round)
-        if mode == "first":
-            for count, item in enumerate(self.answer_button_ref):
-                item.config(text=study_names[count], wraplength=125, state=NORMAL)
-                self.next_button.config(state=DISABLED)
-        else:  # could try to find a better way to wrap text but currently this works well enough
-            for count, item in enumerate(self.answer_button_ref):
-                item.config(text=study_types[count], wraplength=125, state=NORMAL)
-
-            self.next_button.config(state=DISABLED)
-
-        # make the question and display it
         # also get the same name attached to the study and make it the correct answer [half of this in get_score]
+        # set up number list to select a single option from the options for this round
         number_list = [0, 1, 2, 3]
         self.round_number_ref = random.choice(number_list)
         study_type = study_types[self.round_number_ref]
         study_name = study_names[self.round_number_ref]
 
+        # enable answer buttons and make questions / answers for this round
         if mode == "first":
+            questions = study_names
             self.question_label.config(text=f"What is the Study of {study_type}?")
         else:
+            questions = study_types
             self.question_label.config(text=f"{study_name} is the Study of what?")
 
+        for count, item in enumerate(self.answer_button_ref):
+            item.config(text=questions[count], wraplength=125, state=NORMAL)
 
+        # disabled until answer is chosen
+        self.next_button.config(state=DISABLED)
 
     def get_score(self, user_choice):
         """
@@ -239,13 +207,8 @@ class Play:
         results to stats list
         """
 
-        # was it correct???? finding out what button was pushed and if it was correct
-        print(user_choice)  # what button was clicked
-        print(self.round_number_ref)
-
         if user_choice == self.round_number_ref:
-            self.score += 1
-            print(self.score)
+            self.score += 1  # add 1 to score
             self.score_label.config(text=f"Current Score: {self.score}")
         else:
             pass

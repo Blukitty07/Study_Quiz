@@ -91,9 +91,14 @@ class StartGame:
         try:
             rounds_wanted = int(rounds_wanted)
             # correct amount of rounds
-            if rounds_wanted > 0:
+            if rounds_wanted > 1:
                 print(error_check)
                 self.mode_label.config(text=f"You have chosen to play {rounds_wanted} rounds")
+
+            elif rounds_wanted == 1:
+                print(error_check)
+                self.mode_label.config(text=f"You have chosen to play {rounds_wanted} round")
+
             # incorrect amount of rounds
             else:
                 error_check = "yes"

@@ -1,6 +1,5 @@
 from tkinter import *
 from PIL import Image, ImageTk
-from functools import partial
 
 
 class StartGame:
@@ -142,7 +141,6 @@ class Play:
                                       fg="#FFFFFF", bg="#990000", width="10",
                                       command=self.close_play)
         self.end_game_button.grid(row=2)
-
 
     def close_play(self):
         # reshow root (ie choose rounds) and end
