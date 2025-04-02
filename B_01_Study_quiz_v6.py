@@ -354,12 +354,17 @@ class Play:
 
         rounds_wanted = self.rounds_wanted.get()
 
+        question, answer = round_question(mode)
+
         # get round studies and their names
         study_names, study_types = get_study_names()
 
-        questions_so_far = self.round_questions
+        if question in study_types or study_names:
+            study_names, study_types = get_study_names()
+        else:
+            pass
 
-        question, answer = round_question(mode)
+        questions_so_far = self.round_questions
 
         if len(questions_so_far) == 273:
             questions_so_far.clear()
@@ -369,7 +374,7 @@ class Play:
             self.warning_time = False
 
         while question in questions_so_far:
-            question = round_question(mode)
+            question, answer = round_question(mode)
 
         questions_so_far.append(question)
 
@@ -471,6 +476,7 @@ class Play:
         score = self.score
         mode_type = ""
         Leaderboard(score, mode_type)
+        self.play_box.destroy()
 
 
 class DisplayHints:
@@ -577,7 +583,7 @@ class Stats:
             best_score_string = f"Best Score: n/a"
         else:
             comment_string = ""
-            comment_colour = "#ccffcc"
+            comment_colour = "#bdeaff"
 
         question_answered_string = f"Questions Answered: {rounds_played} of {rounds_wanted}"
 
@@ -597,7 +603,7 @@ class Stats:
         stats_label_ref_list = []
         for count, item in enumerate(all_stats_string):
             self.stats_label = Label(self.stats_frame, text=item[0], font=item[1],
-                                     anchor="w", justify="left", bg="#ccffcc",
+                                     anchor="w", justify="left", bg="#bdeaff",
                                      pady=5, padx=30)
             self.stats_label.grid(row=count, sticky=item[2], padx=10)
             stats_label_ref_list.append(self.stats_label)
@@ -605,6 +611,31 @@ class Stats:
         # Configure comment label background (for all won / all lost)
         stats_comment_label = stats_label_ref_list[4]
         stats_comment_label.config(bg=comment_colour)
+        stats_comment_label.grid(row=6)
+
+        # open file and grab the names and points
+        leader_name_list, leader_point_list = open_file()
+
+        if len(leader_name_list) == 0:
+            pass
+        else:
+            # heading for leaderboard
+            high_heading = Label(self.stats_frame, text="high score", font=("Arial", "14", "bold"), bg="#bdeaff")
+            high_heading.grid(row=4)
+
+            # names and points displayed
+            leaderboard_list = []
+            for count, item in enumerate(leader_name_list):
+                self.make_label = Label(self.stats_frame, text=f"{leader_name_list[count]} -- "
+                                                               f"{leader_point_list[count]} points",
+                                        font=("Arial", "13"),
+                                        bg="#bdeaff",
+                                        wraplength=300, justify="left")
+                leaderboard_list.append(self.make_label)
+
+            highscore = leaderboard_list[0]
+            highscore.grid(row=5)
+
 
         self.dismiss_button = Button(self.stats_frame, font=("Arial", "16", "bold"),
                                      text="Dismiss", bg="#458045",
@@ -612,7 +643,7 @@ class Stats:
                                      command=partial(self.close_stats, partner))
         self.dismiss_button.grid(row=8, padx=10, pady=10)
 
-        self.stats_frame.config(bg="#ccffcc")
+        self.stats_frame.config(bg="#bdeaff")
 
     # closes stats dialogue (used by button and x at top of corner)
 
@@ -679,13 +710,16 @@ class Leaderboard:
 
         # frame for the name entry
         self.winner_frame = Frame(self.end_frame)
-        self.winner_frame.grid(row=3)
+        self.winner_frame.grid(row=4)
 
         # define the lists of names and points to be carried over in functions
         self.leader_name_list = leader_name_list
         self.leader_point_list = leader_point_list
 
-        if score > low_point:
+        if score > low_point or length_leaderboard < 3:
+            self.instruction_label = Label(self.end_frame, font=("Arial", "13"), text="these are instrucitons")
+            self.instruction_label.grid(row=3)
+
             self.winners_name = Entry(self.winner_frame, font=("Arial", "20", "bold"), width=8)
             self.winners_name.grid(row=0, column=0, pady=10)
 

@@ -231,6 +231,7 @@ class Play:
     def __init__(self, how_many, mode):
 
         # stuff for the questions
+        self.warning_label = ""
         self.input_place = 0
         self.round_questions = []
 
@@ -248,9 +249,8 @@ class Play:
 
         self.play_box = Toplevel()
 
-        # If users press cross at top, closes hint and releases hint button
-        self.play_box.protocol('WM_DELETE_WINDOW',
-                               partial(self.close_play))
+        # if users press the 'x' on the game window. End the game
+        self.play_box.protocol('WM_DELETE_WINDOW', root.destroy)
 
         self.game_frame = Frame(self.play_box)
         self.game_frame.grid(padx=10, pady=10)
@@ -259,8 +259,7 @@ class Play:
         play_labels_list = [
             [f"Question 0 of {how_many}", ("Arial", "16", "bold"), None, 0],
             [f"Score: 0", ("Arial", "12"), "#D5E8D4", 1],
-            [f"{mode} mode. example Question", ("Arial", "13"), "#FFF2CC", 2],
-            ["warning", ("Arial", "13"), "#F8CECC", 3]
+            [f"{mode} mode. example Question", ("Arial", "13"), "#FFF2CC", 2]
         ]
 
         play_labels_ref = []
@@ -275,14 +274,12 @@ class Play:
         self.round_label = play_labels_ref[0]
         self.score_label = play_labels_ref[1]
         self.question_label = play_labels_ref[2]
-        self.warning_label = play_labels_ref[3]
 
-        # MAKE SURE IT DISAPERS TEST IT REAPPERING
-        self.warning_label.grid_forget()
+        self.warning_time = False
 
         # set up answer frame
         self.answer_frame = Frame(self.game_frame)
-        self.answer_frame.grid(row=4)
+        self.answer_frame.grid(row=3)
 
         self.answer_button_ref = []
         self.button_list = []
@@ -303,17 +300,17 @@ class Play:
 
         # Frame to hold hints and stats buttons
         self.hints_stats_frame = Frame(self.game_frame)
-        self.hints_stats_frame.grid(row=7)
+        self.hints_stats_frame.grid(row=8)
 
         # set up score
         self.score = 0
 
         # list for buttons (frame | text | bg | command | width | row | column )
         control_button_list = [
-            [self.game_frame, "Next Round", "#86a5c4", lambda: [self.new_round(mode)], 21, 5, None],
+            [self.game_frame, "Next Round", "#86a5c4", lambda: [self.new_round(mode)], 21, 7, None],
             [self.hints_stats_frame, "Instructions", "#c0bdff", self.to_hints, 10, 0, 0],
             [self.hints_stats_frame, "Stats", "#bdeaff", self.to_stats, 10, 0, 1],
-            [self.game_frame, "Main Menu", "#cc81a5", self.close_play, 21, 7, None]
+            [self.game_frame, "Main Menu", "#cc81a5", self.close_play, 21, 9, None]
         ]
 
         # create buttons and add to list
@@ -343,32 +340,43 @@ class Play:
         """
 
         # retrieve number of rounds played. add one to it and configure heading
-
         rounds_played = self.rounds_played.get()
         rounds_played += 1
         self.rounds_played.set(rounds_played)
 
+        # set up warning label
+        self.warning_label = Label(self.game_frame, text="You have answered all questions, they are now repeating",
+                                   font=("Arial", "13"), bg="#F8CECC")
+        self.warning_label.grid(row=6)
+
         rounds_wanted = self.rounds_wanted.get()
+
+        question, answer = round_question(mode)
 
         # get round studies and their names
         study_names, study_types = get_study_names()
 
+        if question in study_types or study_names:
+            study_names, study_types = get_study_names()
+        else:
+            pass
+
         questions_so_far = self.round_questions
 
-        question, answer = round_question(mode)
-
-        if len(questions_so_far) == 2:
+        if len(questions_so_far) == 273:
             questions_so_far.clear()
-            questions_so_far.append(question)
-            self.warning_label.config(text="Warning: \n"
-                                           "Questions are now repeats as you have completed all possible questions",
-                                      wraplength=350)
-            self.warning_label.grid(row=3)
+            self.warning_time = True
+        else:
+            self.warning_label.destroy()
+            self.warning_time = False
 
         while question in questions_so_far:
-            question = round_question(mode)
+            question, answer = round_question(mode)
 
         questions_so_far.append(question)
+
+        if self.warning_time:
+            self.warning_time = False
 
         # prepare to input the answer into a specific place
         number_list = [0, 1, 2, 3]
@@ -414,7 +422,6 @@ class Play:
 
         # enable stats & next buttons, disable answer buttons
         self.next_button.config(state=NORMAL)
-        self.stats_button.config(state=NORMAL)
 
         # check to see if game is over
         rounds_played = self.rounds_played.get()
@@ -465,6 +472,7 @@ class Play:
         score = self.score
         mode_type = ""
         Leaderboard(score, mode_type)
+        self.play_box.destroy()
 
 
 class DisplayHints:
@@ -476,6 +484,7 @@ class DisplayHints:
 
         # disable hint button
         partner.hints_button.config(state=DISABLED)
+        partner.end_game_button.config(state=DISABLED)
 
         # If users press cross at top, closes hint and releases hint button
         self.hint_box.protocol('WM_DELETE_WINDOW',
@@ -521,6 +530,7 @@ class DisplayHints:
         """
         # Put hint button back to normal
         partner.hints_button.config(state=NORMAL)
+        partner.end_game_button.config(state=NORMAL)
         self.hint_box.destroy()
 
 
@@ -538,6 +548,7 @@ class Stats:
 
         # disable stats button
         partner.stats_button.config(state=DISABLED)
+        partner.end_game_button.config(state=DISABLED)
 
         # If users press cross at top, closes stats and releases stats button
         self.stats_box.protocol('WM_DELETE_WINDOW',
@@ -551,14 +562,9 @@ class Stats:
         total_score = user_score
         max_possible = rounds_wanted
 
-        # high score do later
-
-        # Strings for stats Labels
-
         success_string = (f"Success Rate: {user_score} / {rounds_played}"
                           f" ({success_rate:.1f}%)")
         score_string = f"Current Score: {total_score}"
-        # best score do later
 
         # custom comment text and formatting
         if total_score == rounds_played:
@@ -571,7 +577,7 @@ class Stats:
             best_score_string = f"Best Score: n/a"
         else:
             comment_string = ""
-            comment_colour = "#ccffcc"
+            comment_colour = "#bdeaff"
 
         question_answered_string = f"Questions Answered: {rounds_played} of {rounds_wanted}"
 
@@ -591,7 +597,7 @@ class Stats:
         stats_label_ref_list = []
         for count, item in enumerate(all_stats_string):
             self.stats_label = Label(self.stats_frame, text=item[0], font=item[1],
-                                     anchor="w", justify="left", bg="#ccffcc",
+                                     anchor="w", justify="left", bg="#bdeaff",
                                      pady=5, padx=30)
             self.stats_label.grid(row=count, sticky=item[2], padx=10)
             stats_label_ref_list.append(self.stats_label)
@@ -599,14 +605,38 @@ class Stats:
         # Configure comment label background (for all won / all lost)
         stats_comment_label = stats_label_ref_list[4]
         stats_comment_label.config(bg=comment_colour)
+        stats_comment_label.grid(row=6)
+
+        # open file and grab the names and points
+        leader_name_list, leader_point_list = open_file()
+
+        if len(leader_name_list) == 0:
+            pass
+        else:
+            # heading for leaderboard
+            high_heading = Label(self.stats_frame, text="high score", font=("Arial", "14", "bold"), bg="#bdeaff")
+            high_heading.grid(row=4)
+
+            # names and points displayed
+            leaderboard_list = []
+            for count, item in enumerate(leader_name_list):
+                self.make_label = Label(self.stats_frame, text=f"{leader_name_list[count]} -- "
+                                                               f"{leader_point_list[count]} points",
+                                        font=("Arial", "13"),
+                                        bg="#bdeaff",
+                                        wraplength=300, justify="left")
+                leaderboard_list.append(self.make_label)
+
+            highscore = leaderboard_list[0]
+            highscore.grid(row=5)
 
         self.dismiss_button = Button(self.stats_frame, font=("Arial", "16", "bold"),
-                                     text="Dismiss", bg="#458045",
+                                     text="Dismiss", bg="#347c9e",
                                      fg="#FFFFFF", width=20,
                                      command=partial(self.close_stats, partner))
         self.dismiss_button.grid(row=8, padx=10, pady=10)
 
-        self.stats_frame.config(bg="#ccffcc")
+        self.stats_frame.config(bg="#bdeaff")
 
     # closes stats dialogue (used by button and x at top of corner)
 
@@ -616,6 +646,7 @@ class Stats:
         """
         # Put stats button back to normal
         partner.stats_button.config(state=NORMAL)
+        partner.end_game_button.config(state=NORMAL)
         self.stats_box.destroy()
 
 
@@ -629,6 +660,10 @@ class Leaderboard:
 
         self.end_frame = Frame(self.end_box)
         self.end_frame.grid(padx=10, pady=10)
+
+        # If users press cross at top, closes stats and releases stats button
+        self.end_box.protocol('WM_DELETE_WINDOW',
+                              partial(self.back_to_start))
 
         # body font for most labels
         body_font = ("Arial", "12")
@@ -658,7 +693,7 @@ class Leaderboard:
         length_leaderboard = len(leaderboard_list)
         if length_leaderboard == 0:
             low_point = 0
-            if mode_type == "start":
+            if mode_type == "start" or score == 0:
                 no_score = Label(self.leaderboard_frame, text="There are no scores yet!", bg="#ffa6d4",
                                  font=body_font)
                 no_score.grid(row=2)
@@ -673,13 +708,20 @@ class Leaderboard:
 
         # frame for the name entry
         self.winner_frame = Frame(self.end_frame)
-        self.winner_frame.grid(row=3)
+        self.winner_frame.grid(row=4)
 
         # define the lists of names and points to be carried over in functions
         self.leader_name_list = leader_name_list
         self.leader_point_list = leader_point_list
 
-        if score > low_point:
+        if mode_type == "start" or score == 0:
+            pass
+
+        elif score > low_point or length_leaderboard < 3:
+            self.instruction_label = Label(self.end_frame, font=("Arial", "13"),
+                                           text="enter your name below [3 letters],\n then press submit!")
+            self.instruction_label.grid(row=3)
+
             self.winners_name = Entry(self.winner_frame, font=("Arial", "20", "bold"), width=8)
             self.winners_name.grid(row=0, column=0, pady=10)
 
@@ -702,8 +744,6 @@ class Leaderboard:
 
         # list for buttons (frame | text | bg | command | width | row | column )
         control_button_list = [
-            [self.hints_stats_frame, "Hints", "#c0bdff", "", 10, 0, 0],
-            [self.hints_stats_frame, "Stats", "#bdeaff", "", 10, 0, 1],
             [self.end_frame, "Play Again", "#cc81a5", self.back_to_start, 21, 7, None]
         ]
 
@@ -716,6 +756,10 @@ class Leaderboard:
             make_control_button.grid(row=item[5], column=item[6], pady=5, padx=5)
 
             control_ref_list.append(make_control_button)
+
+        if mode_type == "start":
+            play_again = control_ref_list[0]
+            play_again.config(text="Main Menu")
 
     def check_name(self, score):
         name_entry = self.winners_name.get()
@@ -763,12 +807,9 @@ class Leaderboard:
         # only leave the top 3 scores
         if length_of_list > 3:
             del leader_board_entries[-1]
-            print(leader_board_entries)
 
         # separates the list into the names and points
         names, points = zip(*leader_board_entries)
-        print(names)
-        print(points)
 
         # open file
         writing = open("previous_top_scores.txt", "w")
